@@ -14,23 +14,15 @@ import numpy as np
 from chainer import optimizers
 from chainerrl import experiments, explorers, replay_buffer, misc
 
-from no_use.bin.test_agent_chainer import evaluate
+from test_agent_chainer import evaluate
 from gym_malware import sha256_holdout
 from gym_malware.envs.controls import manipulate2 as manipulate
 from gym_malware.envs.utils import pefeatures
 from hook.plot_hook import PlotHook
 from hook.training_scores_hook import TrainingScoresHook
 
-# from keras.models import Sequential
-# from keras.layers import Dense, Activation, Flatten, ELU, Dropout, BatchNormalization
-# from keras.optimizers import RMSprop
-#
-# # pip install keras-rl
-# from rl.agents.dqn import DQNAgent
-# from rl.policy import BoltzmannQPolicy, EpsGreedyQPolicy
-# from rl.memory import SequentialMemory
-
-ACTION_LOOKUP = {i: act for i, act in enumerate(manipulate.ACTION_TABLE.keys())}
+ACTION_LOOKUP = {i: act for i, act in enumerate(
+    manipulate.ACTION_TABLE.keys())}
 
 net_layers = [256, 64]
 
@@ -40,6 +32,8 @@ net_layers = [256, 64]
 # (new) ➜  ~ python -m visdom.server -p 8888
 # 2、运行train
 # python train.py
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--outdir', type=str, default='models')
@@ -49,7 +43,7 @@ def main():
     parser.add_argument('--start-epsilon', type=float, default=1.0)
     parser.add_argument('--end-epsilon', type=float, default=0.1)
     parser.add_argument('--load', type=str, default=None)
-    parser.add_argument('--steps', type=int, default=30000)
+    parser.add_argument('--steps', type=int, default=100000)
     parser.add_argument('--prioritized-replay', action='store_false')
     parser.add_argument('--episodic-replay', action='store_true')
     parser.add_argument('--replay-start-size', type=int, default=1000)
@@ -62,7 +56,7 @@ def main():
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--minibatch-size', type=int, default=None)
     parser.add_argument('--test-random', action='store_true')
-    parser.add_argument('--rounds', type=int, default=3)
+    parser.add_argument('--rounds', type=int, default=1)
     args = parser.parse_args()
 
     class QFunction(chainer.Chain):
@@ -140,22 +134,26 @@ def main():
             if args.minibatch_size is None:
                 args.minibatch_size = 4
             if args.prioritized_replay:
-                betasteps = (args.steps - args.replay_start_size) // args.update_interval
-                rbuf = replay_buffer.PrioritizedEpisodicReplayBuffer(rbuf_capacity, betasteps=betasteps)
+                betasteps = (
+                    args.steps - args.replay_start_size) // args.update_interval
+                rbuf = replay_buffer.PrioritizedEpisodicReplayBuffer(
+                    rbuf_capacity, betasteps=betasteps)
             else:
                 rbuf = replay_buffer.EpisodicReplayBuffer(rbuf_capacity)
         else:
             if args.minibatch_size is None:
                 args.minibatch_size = 32
             if args.prioritized_replay:
-                betasteps = (args.steps - args.replay_start_size) // args.update_interval
-                rbuf = replay_buffer.PrioritizedReplayBuffer(rbuf_capacity, betasteps=betasteps)
+                betasteps = (
+                    args.steps - args.replay_start_size) // args.update_interval
+                rbuf = replay_buffer.PrioritizedReplayBuffer(
+                    rbuf_capacity, betasteps=betasteps)
             else:
                 rbuf = replay_buffer.ReplayBuffer(rbuf_capacity)
 
         # Chainer only accepts numpy.float32 by default, make sure
         # a converter as a feature extractor function phi.
-        phi = lambda x: x.astype(np.float32, copy=False)
+        def phi(x): return x.astype(np.float32, copy=False)
 
         agent = chainerrl.agents.DoubleDQN(q_func, opt, rbuf, gamma=args.gamma,
                                            explorer=explorer, replay_start_size=args.replay_start_size,
@@ -184,15 +182,18 @@ def main():
         agent = create_ddqn_agent(env, args)
 
         q_hook = PlotHook('Average Q Value', ylabel='Average Action Value (Q)')
-        loss_hook = PlotHook('Average Loss', plot_index=1, ylabel='Average Loss per Episode')
-        reward_hook = PlotHook('Average Reward', plot_index=2, ylabel='Reward Value per Episode')
+        loss_hook = PlotHook('Average Loss', plot_index=1,
+                             ylabel='Average Loss per Episode')
+        reward_hook = PlotHook(
+            'Average Reward', plot_index=2, ylabel='Reward Value per Episode')
         scores_hook = TrainingScoresHook('scores.txt', args.outdir)
 
         chainerrl.experiments.train_agent_with_evaluation(
             agent, env,
             steps=args.steps,  # Train the graduation_agent for this many rounds steps
             max_episode_len=env.maxturns,  # Maximum length of each episodes
-            eval_interval=args.eval_interval,  # Evaluate the graduation_agent after every 1000 steps
+            # Evaluate the graduation_agent after every 1000 steps
+            eval_interval=args.eval_interval,
             eval_n_runs=args.eval_n_runs,  # 100 episodes are sampled for each evaluation
             outdir=args.outdir,  # Save everything to 'result' directory
             step_hooks=[q_hook, loss_hook, scores_hook, reward_hook],
@@ -219,69 +220,6 @@ def main():
         assert lastmodel >= 0, "No saved models!"
         return os.path.join(basedir, str(lastmodel))
 
-    # kerasrl
-    # def generate_dense_model(input_shape, nb_actions):
-    #     model = Sequential()
-    #     model.add(Flatten(input_shape=input_shape))
-    #     # normalize before compute
-    #     model.add(BatchNormalization())
-    #     model.add(Dropout(0.1))  # drop out the input to make model less sensitive to any 1 feature
-    #
-    #     for layer in net_layers:
-    #         model.add(Dense(layer))
-    #         model.add(ELU(alpha=1.0))
-    #         model.add(Dropout(0.1))
-    #
-    #     model.add(Dense(nb_actions))
-    #     model.add(Activation('linear'))
-    #     print(model.summary())
-    #
-    #     return model
-    #
-    # def train_keras_dqn_model(args):
-    #     ENV_NAME = 'malware-v0'
-    #     env = gym.make(ENV_NAME)
-    #     env.seed(123)
-    #     nb_actions = env.action_space.n
-    #     window_length = 1  # "experience" consists of where we were, where we are now
-    #
-    #     # generate a policy model
-    #     model = generate_dense_model((window_length,) + env.observation_space.shape, nb_actions)
-    #
-    #     # configure and compile our graduation_agent
-    #     # BoltzmannQPolicy selects an action stochastically with a probability generated by soft-maxing Q values
-    #     policy = BoltzmannQPolicy()
-    #
-    #     # memory can help a model during training
-    #     # for this, we only consider a single malware sample (window_length=1) for each "experience"
-    #     memory = SequentialMemory(limit=1000, ignore_episode_boundaries=False, window_length=window_length)
-    #
-    #     # DQN graduation_agent as described in Mnih (2013) and Mnih (2015).
-    #     # http://arxiv.org/pdf/1312.5602.pdf
-    #     # http://arxiv.org/abs/1509.06461
-    #     agent = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=16,
-    #                      enable_double_dqn=True, enable_dueling_network=True, dueling_type='avg',
-    #                      target_model_update=1e-2, policy=policy, batch_size=16)
-    #
-    #     # keras-rl allows one to use and built-in keras optimizer
-    #     agent.compile(RMSprop(lr=1e-2), metrics=['mae'])
-    #
-    #     # play the game. learn something!
-    #     agent.fit(env, nb_steps=args.steps, visualize=False, verbose=2)
-    #
-    #     history_test = None
-    #
-    #     if args.test:
-    #         # Set up the testing environment
-    #         TEST_NAME = 'malware-test-v0'
-    #         test_env = gym.make(TEST_NAME)
-    #
-    #         # evaluate the graduation_agent on a few episodes, drawing randomly from the test samples2
-    #         agent.test(test_env, nb_episodes=100, visualize=False)
-    #         history_test = test_env.history
-    #
-    #     return env, agent
-
     # test
     if not args.test:
         print("training...")
@@ -306,7 +244,8 @@ def main():
                     count += 1
                     if v['evaded']:
                         success_count += 1
-                        f.write("{}:{}->{}\n".format(count, k, v['evaded_sha256']))
+                        f.write("{}:{}->{}\n".format(count,
+                                k, v['evaded_sha256']))
                     else:
                         f.write("{}:{}->\n".format(count, k))
 
@@ -315,7 +254,8 @@ def main():
 
             # 标识成功失败
             dirs = os.listdir(args.outdir)
-            second_line = linecache.getline(os.path.join(args.outdir, 'scores.txt'), 2)
+            second_line = linecache.getline(
+                os.path.join(args.outdir, 'scores.txt'), 2)
             success_score = second_line.strip('\n').split('\t')[3]
 
             # 训练提前结束，标识成功
@@ -325,7 +265,8 @@ def main():
                     success_flag = True
                     break
 
-            os.rename(args.outdir, '{}-{}{}'.format(args.outdir, success_score, '-success' if success_flag else ''))
+            os.rename(args.outdir, '{}-{}{}'.format(args.outdir,
+                      success_score, '-success' if success_flag else ''))
 
             # 重置outdir到models
             args.outdir = 'models'
@@ -336,12 +277,16 @@ def main():
 
         # baseline: choose actions at random
         if args.test_random:
-            random_action = lambda bytez: np.random.choice(list(manipulate.ACTION_TABLE.keys()))
-            random_success, misclassified = evaluate(random_action)
-            total = len(sha256_holdout) - len(misclassified)  # don't count misclassified towards success
+            def random_action(bytez): return np.random.choice(
+                list(manipulate.ACTION_TABLE.keys()))
+            random_success, misclassified, random_success_mean_len = evaluate(
+                random_action)
+            # don't count misclassified towards success
+            total = len(sha256_holdout) - len(misclassified)
 
             with open(scores_file, 'a') as f:
-                random_result = "random: {}({}/{})\n".format(len(random_success) / total, len(random_success), total)
+                random_result = "random: {}({}/{}), Mean Len: {}\n".format(
+                    len(random_success) / total, len(random_success), total, random_success_mean_len)
                 f.write(random_result)
                 f.write("==========================\n")
 
@@ -362,10 +307,12 @@ def main():
         agent = create_ddqn_agent(env, args)
         mm = get_latest_model_dir_from(model_fold)
         agent.load(mm)
-        success, _ = evaluate(agent_policy(agent))
-        blackbox_result = "black: {}({}/{})".format(len(success) / total, len(success), total)
+        success, _, label_success_mean_len = evaluate(agent_policy(agent))
+        blackbox_result = "black: {}({}/{}), Mean Len: {}".format(len(success) /
+                                                                  total, len(success), total, label_success_mean_len)
         with open(scores_file, 'a') as f:
             f.write("{}->{}\n".format(mm, blackbox_result))
+
 
 if __name__ == '__main__':
     main()
