@@ -39,7 +39,7 @@ class PlotHook(StepHook):
 
         self.plot_index = plot_index
         self.episode_step = 0
-        self.vis = visdom.Visdom(port=8888)
+        self.vis = visdom.Visdom(port=8887)
         assert self.vis.check_connection(), "Fail to connect to Visdom backend!"
 
     def plot(self, step: int, sig: dict):
@@ -52,7 +52,8 @@ class PlotHook(StepHook):
         if self.win is None:
             self.win = self.vis.line(Y=Y, X=X, opts=self.opts)
         else:
-            self.vis.line(Y=Y, X=X, win=self.win, update='append', opts=self.opts)
+            self.vis.line(Y=Y, X=X, win=self.win,
+                          update='append', opts=self.opts)
 
     def __call__(self, env, agent, step):
         if self.plot_index == 2:   # chainer: reward
@@ -61,7 +62,7 @@ class PlotHook(StepHook):
                 d = {'Average Reward': 10 / self.episode_step}
                 self.plot(step, d)
                 self.episode_step = 0
-        elif self.plot_index == 5 :
+        elif self.plot_index == 5:
             stat = agent.get_statistics()
             d = {stat[self.plot_index][0]: stat[self.plot_index][1]}
             self.plot(step, d)

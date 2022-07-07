@@ -168,7 +168,7 @@ def main():
         return agent
 
     # 开始训练
-    def train_agent(args, use_score=False):
+    def train_agent(args, use_score=True):
         ENV_NAME = 'malware-score-v0' if use_score else 'malware-v0'
         env = gym.make(ENV_NAME)
         ENV_TEST_NAME = 'malware-score-test-v0' if use_score else 'malware-test-v0'
