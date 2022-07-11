@@ -6,3 +6,5 @@ evaded
 *.pyc
 nohup.out
 *.txt
+
+!requirements.txt
