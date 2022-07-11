@@ -1,6 +1,13 @@
 name: DQEAF
 channels:
   - defaults
+  - http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+  - http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+  - http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/
+  - http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/Paddle/
+  - http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/fastai/
+  - http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch/
+  - http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/bioconda/
 dependencies:
   - _libgcc_mutex=0.1=main
   - _openmp_mutex=5.1=1_gnu
@@ -24,6 +31,7 @@ dependencies:
   - zlib=1.2.12=h7f8727e_2
   - pip:
     - attrs==21.4.0
+    - cached-property==1.5.2
     - chainer==3.4.0
     - chainerrl==0.3.0
     - chardet==3.0.4
